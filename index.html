@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -14,7 +15,7 @@
     }
   }
   </script>
-/*- CSS -*/
+
   <style>
     * {
       box-sizing: border-box;
@@ -112,7 +113,6 @@
 </head>
 
 <body>
-
   <div id="container"></div>
   <div id="touchArea"></div>
 
@@ -126,7 +126,6 @@
   </div>
 
   <script type="module">
-
     import * as THREE from "three";
     import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
     import { MindARThree } from "mindar-image-three";
@@ -136,8 +135,7 @@
     const soundButton = document.getElementById("soundButton");
     const touchArea = document.getElementById("touchArea");
 
-
-    // AR 초기 설정
+    // AR 초기 설정 - targets.mind 연결
     const mindarThree = new MindARThree({
       container: document.querySelector("#container"),
       imageTargetSrc: "./targets.mind",
@@ -147,47 +145,44 @@
     const { renderer, scene, camera } = mindarThree;
     const anchor = mindarThree.addAnchor(0);
 
-    // 위치 이동용 그룹(대상별로 분리)
-    // 3D 모델은 modelMoveGroup, 영상은 backgroundMoveGroup, 이미지는 imageMoveGroup에 넣고
-    // 두 손가락이 닿은 대상의 위치변경
+    // 대상별 위치 이동 그룹
     const modelMoveGroup = new THREE.Group();
     const backgroundMoveGroup = new THREE.Group();
     const imageMoveGroup = new THREE.Group();
+
     anchor.group.add(modelMoveGroup);
     anchor.group.add(backgroundMoveGroup);
     anchor.group.add(imageMoveGroup);
 
-    // 이미지의 기본(초기화) 위치: 영상 아래쪽
     const imageHome = new THREE.Vector3(0, 0, 0);
 
     // 조명
     scene.add(
       new THREE.HemisphereLight(0xffffff, 0x444444, 1.5)
-    ); 
-    // 환경라이트, 수치가 밝기
+    );
+
     const directionalLight = new THREE.DirectionalLight(
       0xffffff, 2
     );
-    
+
     directionalLight.position.set(1, 2, 3);
     scene.add(directionalLight);
 
     // 콘텐츠 설정
     const TARGET_MODEL_SIZE = 1.00;
     const MODEL_HEIGHT_OFFSET = 0.03;
-    // 콘텐츠 urls
+
+    // GitHub 파일 경로
     const VIDEO_FILE = "./background.mp4";
     const IMAGE_FILE = "./background.jpg";
-    const MODEL_FILE = "./model.glb";
+    const MODEL_FILE = "./quaternius_cc0-chicken-817.glb";
 
-    // 영상과 이미지 사이 간격 (마커 가로 길이 1 기준)
-    // 영상 아래에 재생바 0.15
     const IMAGE_GAP = 0.15;
 
-    // 영상 재생바 (마커 가로 길이 1 기준, 영상 가로 길이와 같은 길이)
-    const VIDEO_BAR_HEIGHT = 0.025;      // 바 두께
-    const VIDEO_BAR_HIT_HEIGHT = 0.10;   // 터치로 잡을 수 있는 영역 두께
-    const VIDEO_BAR_OFFSET = 0.05;       // 영상과 바 중심까지 거리
+    // 영상 재생바 설정
+    const VIDEO_BAR_HEIGHT = 0.025;
+    const VIDEO_BAR_HIT_HEIGHT = 0.10;
+    const VIDEO_BAR_OFFSET = 0.05;
 
     let modelRoot = null;
     let initialFitScale = 1;
@@ -203,11 +198,9 @@
     let backgroundTexture = null;
     let imageRequested = false;
 
-    // 이미지 
     let imageMesh = null;
     let imageTexture = null;
 
-    // 영상 재생바
     let videoBar = null;
     let targetVisible = false;
     let started = false;
@@ -215,10 +208,8 @@
 
     const loader = new GLTFLoader();
 
-
     // 상태 표시
     function updateStatus() {
-
       if (!started) {
         status.textContent = "카메라 대기 중";
       } else if (targetVisible) {
@@ -226,39 +217,27 @@
       } else {
         status.textContent = "마커를 카메라에 비춰주세요";
       }
-
     }
 
-
-    // 기존 배경 제거
+    // 기존 영상 배경 제거
     function clearBackground() {
-
-      // 영상이 사라지면 재생바도 같이 제거
       removeVideoBar();
 
       if (backgroundMesh) {
-
         backgroundMoveGroup.remove(backgroundMesh);
-
         backgroundMesh.geometry.dispose();
         backgroundMesh.material.dispose();
-
         backgroundMesh = null;
-
       }
 
       if (backgroundTexture) {
-
         backgroundTexture.dispose();
         backgroundTexture = null;
-
       }
-
     }
 
-    // 배경 이미지 / 영상 표시
+    // 영상 배경 추가
     function addBackground(texture, mediaWidth, mediaHeight) {
-
       if (
         !mediaWidth ||
         !mediaHeight ||
@@ -269,27 +248,17 @@
         return;
       }
 
-      // 기존 배경이 있다면 제거
       clearBackground();
 
-      // 실제 미디어 가로세로 비율
       const ratio = mediaHeight / mediaWidth;
 
-      const geometry = new THREE.PlaneGeometry(
-        1,
-        ratio
-      );
-
+      const geometry = new THREE.PlaneGeometry(1, ratio);
       const material = new THREE.MeshBasicMaterial({
         map: texture,
         side: THREE.DoubleSide
       });
 
-      const plane = new THREE.Mesh(
-        geometry,
-        material
-      );
-
+      const plane = new THREE.Mesh(geometry, material);
       plane.position.set(0, 0, 0);
       plane.renderOrder = 0;
 
@@ -298,18 +267,14 @@
       backgroundMesh = plane;
       backgroundTexture = texture;
 
-      // 영상 바로 아래에 재생바 생성
       createVideoBar(ratio);
-
-      // 영상 크기가 정해졌으므로 이미지 기본 위치 다시 계산
       updateImageHome();
-
     }
 
-
-    // 영상 재생바 생성 / 제거 / 진행 갱신
+    // 영상 재생바 생성
     function createVideoBar(videoRatio) {
       removeVideoBar();
+
       const group = new THREE.Group();
       group.position.set(
         0,
@@ -317,7 +282,6 @@
         0.001
       );
 
-      // 바 배경
       const track = new THREE.Mesh(
         new THREE.PlaneGeometry(1, VIDEO_BAR_HEIGHT),
         new THREE.MeshBasicMaterial({
@@ -330,7 +294,6 @@
 
       track.renderOrder = 1;
 
-      // 진행 표시
       const fill = new THREE.Mesh(
         new THREE.PlaneGeometry(1, VIDEO_BAR_HEIGHT),
         new THREE.MeshBasicMaterial({
@@ -343,7 +306,6 @@
       fill.scale.x = 0.0001;
       fill.renderOrder = 2;
 
-      // 터치 영역 (투명)
       const hit = new THREE.Mesh(
         new THREE.PlaneGeometry(1, VIDEO_BAR_HIT_HEIGHT),
         new THREE.MeshBasicMaterial({
@@ -363,11 +325,10 @@
       backgroundMoveGroup.add(group);
 
       videoBar = { group, track, fill, hit };
-
     }
 
+    // 영상 재생바 제거
     function removeVideoBar() {
-
       if (!videoBar) return;
 
       backgroundMoveGroup.remove(videoBar.group);
@@ -378,11 +339,10 @@
       });
 
       videoBar = null;
-
     }
 
+    // 영상 재생바 갱신
     function updateVideoBar() {
-
       if (
         !videoBar ||
         !video ||
@@ -400,17 +360,13 @@
 
       videoBar.fill.scale.x = Math.max(progress, 0.0001);
       videoBar.fill.position.x = -0.5 + progress / 2;
-
     }
-
 
     // 이미지 기본 위치 계산
     function updateImageHome() {
-
       let homeY = 0;
 
       if (backgroundMesh && imageMesh) {
-
         const videoHalfHeight =
           backgroundMesh.geometry.parameters.height / 2;
 
@@ -418,18 +374,15 @@
           imageMesh.geometry.parameters.height / 2;
 
         homeY = -(videoHalfHeight + imageHalfHeight + IMAGE_GAP);
-
       }
 
       const diffY = homeY - imageHome.y;
       imageHome.y = homeY;
       imageMoveGroup.position.y += diffY;
-
     }
 
-    // 이미지 표시 (영상과 별개로 표시)
+    // 이미지 표시
     function addImage(texture, mediaWidth, mediaHeight) {
-
       if (
         !mediaWidth ||
         !mediaHeight ||
@@ -441,75 +394,55 @@
       }
 
       const ratio = mediaHeight / mediaWidth;
-
-      const geometry = new THREE.PlaneGeometry(
-        1,
-        ratio
-      );
+      const geometry = new THREE.PlaneGeometry(1, ratio);
 
       const material = new THREE.MeshBasicMaterial({
         map: texture,
         side: THREE.DoubleSide
       });
 
-      const plane = new THREE.Mesh(
-        geometry,
-        material
-      );
+      const plane = new THREE.Mesh(geometry, material);
 
-      // 영상과 겹쳐도 깜빡이지 않도록 아주 조금 앞에 배치
       plane.position.set(0, 0, 0.002);
       plane.renderOrder = 1;
+
       imageMoveGroup.add(plane);
 
       imageMesh = plane;
       imageTexture = texture;
 
       updateImageHome();
-
     }
 
     // 이미지 로딩
     function loadBackgroundImage() {
-
       if (imageRequested) return;
-
       imageRequested = true;
 
       const textureLoader = new THREE.TextureLoader();
 
       textureLoader.load(
-
         IMAGE_FILE,
-
         (texture) => {
-
           texture.colorSpace = THREE.SRGBColorSpace;
 
           const image = texture.image;
 
-          // 영상 배경이 아니라 이미지 전용 표시로 변경
           addImage(
             texture,
             image.width,
             image.height
           );
-
         },
-
         undefined,
-
         () => {
           console.log("배경 이미지 로딩 실패");
         }
-
       );
-
     }
 
     // 영상 실패 시 이미지로 전환
     function switchToImage() {
-
       if (videoFailed) return;
 
       videoFailed = true;
@@ -526,16 +459,11 @@
       soundButton.style.display = "none";
 
       clearBackground();
-
-      // 이미지는 처음부터 항상 표시 중이므로, 영상이 사라진 뒤 이미지 위치만 다시 계산
       updateImageHome();
-
     }
-
 
     // 영상 재생
     function playBackgroundVideo() {
-
       if (
         !video ||
         !videoReady ||
@@ -546,39 +474,25 @@
       }
 
       video.play().catch((error) => {
-
         console.log("영상 재생 오류:", error);
 
-        // 브라우저의 사용자 조작 요구
         if (error.name === "NotAllowedError") {
-
           soundButton.textContent = "영상 재생 · 소리 켜기";
           soundButton.style.display = "block";
-
         } else {
-
-          // 코덱 또는 재생 오류
           switchToImage();
-
         }
-
       });
-
     }
 
     // 영상 로딩
     function loadBackgroundVideo() {
-
       video = document.createElement("video");
 
       video.src = VIDEO_FILE;
       video.loop = true;
-
-      // 자동 재생을 위한 초기 음소거
-      // 사용자가 소리 켜기를 누르면 해제
       video.muted = true;
       video.volume = 1;
-
       video.playsInline = true;
       video.autoplay = false;
       video.preload = "auto";
@@ -586,9 +500,7 @@
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
 
-      // 영상 메타데이터 로딩 완료
       video.addEventListener("loadedmetadata", () => {
-
         if (videoReady || videoFailed) return;
 
         const videoWidth = video.videoWidth;
@@ -606,12 +518,9 @@
           videoLoadTimer = null;
         }
 
-        // 영상 텍스처 생성
         videoTexture = new THREE.VideoTexture(video);
-
         videoTexture.colorSpace = THREE.SRGBColorSpace;
 
-        // 이미지와 달리 영상은 videoWidth / videoHeight 사용
         addBackground(
           videoTexture,
           video.videoWidth,
@@ -619,87 +528,61 @@
         );
 
         if (targetVisible) {
-
           soundButton.style.display = "block";
           updateSoundButton();
-
           playBackgroundVideo();
-
         }
-
       });
 
-      // 영상 로딩 실패
       video.addEventListener("error", () => {
-
         switchToImage();
-
       });
 
-      // 영상 로딩이 너무 오래 걸리면 이미지 사용
       videoLoadTimer = setTimeout(() => {
-
         if (!videoReady && !videoFailed) {
           switchToImage();
         }
-
       }, 15000);
 
       video.load();
-
     }
 
-    // 영상과 이미지를 동시에 표시
+    // 영상과 이미지 로딩
     loadBackgroundVideo();
     loadBackgroundImage();
 
-    // 소리 켜기 / 끄기
+    // 소리 버튼
     function updateSoundButton() {
-
       soundButton.textContent = soundEnabled
         ? "소리 끄기"
         : "소리 켜기";
-
     }
 
     soundButton.addEventListener("click", async () => {
-
       if (!video || !videoReady || videoFailed) return;
 
       soundEnabled = !soundEnabled;
-
       video.muted = !soundEnabled;
 
       updateSoundButton();
 
       if (targetVisible) {
-
         try {
-
           await video.play();
-
         } catch (error) {
-
           console.log("영상 재생 오류:", error);
 
           if (error.name !== "NotAllowedError") {
             switchToImage();
           }
-
         }
-
       }
-
     });
 
-
-    // GLB 3D 모델 로딩
+    // 닭 GLB 3D 모델 로딩
     loader.load(
-
       MODEL_FILE,
-
       (gltf) => {
-
         const model = gltf.scene;
 
         const box = new THREE.Box3().setFromObject(model);
@@ -723,61 +606,46 @@
 
         initialFitScale = TARGET_MODEL_SIZE / maxDimension;
 
-        // 밑면 기준 위치
+        // 모델 중심 및 밑면 정렬
         model.position.set(
           -center.x,
           -box.min.y,
           -center.z
         );
 
-        // 크기 및 회전 조작 그룹
         modelRoot = new THREE.Group();
-
         modelRoot.scale.setScalar(initialFitScale);
         modelRoot.add(model);
 
-        // 기존 방향 및 위치 유지
         const orientationGroup = new THREE.Group();
 
         orientationGroup.rotation.x = Math.PI / 2;
         orientationGroup.position.z = MODEL_HEIGHT_OFFSET;
 
         orientationGroup.add(modelRoot);
-
         modelMoveGroup.add(orientationGroup);
-
       },
-
       undefined,
-
       (error) => {
-        console.log("GLB 없음 또는 로딩 실패");
+        console.error("닭 GLB 모델 로딩 실패:", error);
       }
-
     );
 
-
-    // 마커 인식
+    // 마커 인식 성공
     anchor.onTargetFound = () => {
-
       targetVisible = true;
 
       if (video && videoReady && !videoFailed) {
-
         soundButton.style.display = "block";
-
         updateSoundButton();
-
         playBackgroundVideo();
-
       }
 
       updateStatus();
-
     };
 
+    // 마커 인식 해제
     anchor.onTargetLost = () => {
-
       targetVisible = false;
 
       if (video) {
@@ -785,24 +653,18 @@
       }
 
       soundButton.style.display = "none";
-
       updateStatus();
-
     };
-
 
     // 카메라 시작
     async function startAR() {
-
       if (started || starting) return;
 
       starting = true;
-
       status.textContent = "카메라 권한 확인 중...";
       startButton.style.display = "none";
 
       try {
-
         await mindarThree.start();
 
         started = true;
@@ -814,36 +676,24 @@
         });
 
         updateStatus();
-
       } catch (error) {
-
         console.error("AR 시작 오류:", error);
 
         starting = false;
-
         status.textContent = "카메라를 시작할 수 없습니다";
         startButton.style.display = "block";
-
       }
-
     }
 
     startAR();
-
     startButton.addEventListener("click", startAR);
-
 
     // 초기화
     document.getElementById("reset").addEventListener("click", () => {
-
-      // 이동한 위치 초기화 (모델/배경 모두, 모델이 없어도 배경 위치는 초기화)
       modelMoveGroup.position.set(0, 0, 0);
       backgroundMoveGroup.position.set(0, 0, 0);
-
-      // 영상 크기도 초기화
       backgroundMoveGroup.scale.set(1, 1, 1);
 
-      // 이미지 위치(영상 아래쪽 기본 위치) 및 크기 초기화
       imageMoveGroup.position.copy(imageHome);
       imageMoveGroup.scale.set(1, 1, 1);
 
@@ -851,12 +701,9 @@
 
       modelRoot.scale.setScalar(initialFitScale);
       modelRoot.rotation.set(0, 0, 0);
-
     });
 
-
-    // 한 손가락 회전
-   // 두 손가락 확대 / 축소 + 위치 이동
+    // 터치 인터랙션
     const activePointers = new Map();
 
     let previousX = 0;
@@ -867,29 +714,20 @@
 
     const ROTATION_SPEED = 0.01;
 
-    // 영상 두드리기(탭) 판정 기준
-    const TAP_MOVE_LIMIT = 10;   // px: 이 이상 움직이면 탭이 아님
-    const TAP_MAX_TIME = 400;    // ms: 이 시간 안에 손을 떼야 탭
-
-    // 영상 위 드래그 시 재생 위치 이동량
-    // 1 = 화면 가로 전체를 드래그하면 영상 전체 길이만큼 이동
-    // 0.25 = 화면 가로 전체를 드래그하면 영상 길이의 25%만큼 이동 (값이 작을수록 둔해짐)
+    const TAP_MOVE_LIMIT = 10;
+    const TAP_MAX_TIME = 400;
     const SEEK_SCREEN_WIDTH_RATIO = 0.25;
 
-    // 한 손가락 터치 상태
-    let singleStartTarget = null;   // 터치 시작 지점의 대상 ("model" / "image" / "background" / null)
+    let singleStartTarget = null;
     let tapCandidate = false;
     let tapStartX = 0;
     let tapStartY = 0;
     let tapStartTime = 0;
 
-    //  재생바 터치 / 드래그 위치로 영상 재생 위치 이동
-    // 터치 지점을 마커 평면 좌표로 바꾼 뒤, 영상 그룹의 위치·크기를 빼서
-    // 영상 가로 길이 기준 0 ~ 1 진행률로 계산
     const barSeekLocal = new THREE.Vector3();
 
+    // 재생바로 영상 위치 이동
     function seekVideoFromScreen(clientX, clientY) {
-
       if (
         !video ||
         !videoReady ||
@@ -903,7 +741,6 @@
       if (!screenToAnchorLocal(clientX, clientY, barSeekLocal)) return;
 
       const scaleX = backgroundMoveGroup.scale.x;
-
       if (!scaleX) return;
 
       const progress = THREE.MathUtils.clamp(
@@ -913,12 +750,10 @@
       );
 
       video.currentTime = progress * video.duration;
-
     }
 
-    // 영상 재생 / 일시정지 전환
+    // 재생 및 일시정지
     function toggleVideoPlayback() {
-
       if (
         !video ||
         !videoReady ||
@@ -933,38 +768,31 @@
       } else {
         video.pause();
       }
-
     }
 
+    // 두 손가락 거리 계산
     function getPinchDistance() {
-
       const points = Array.from(activePointers.values());
-
       if (points.length < 2) return 0;
 
       const dx = points[0].x - points[1].x;
       const dy = points[0].y - points[1].y;
 
       return Math.sqrt(dx * dx + dy * dy);
-
     }
 
-    // 두 손가락 중간점 (화면 좌표)
+    // 두 손가락 중간점
     function getPinchMidpoint() {
-
       const points = Array.from(activePointers.values());
-
       if (points.length < 2) return null;
 
       return {
         x: (points[0].x + points[1].x) / 2,
         y: (points[0].y + points[1].y) / 2
       };
-
     }
 
-    // 화면 좌표 -> 마커 
-    // 카메라 광선이 마커와 만나는 지점을 사용합니다.
+    // 화면 좌표를 마커 좌표로 변환
     const dragRaycaster = new THREE.Raycaster();
     const dragPlane = new THREE.Plane();
     const dragNdc = new THREE.Vector2();
@@ -972,9 +800,7 @@
     const dragPlanePoint = new THREE.Vector3();
     const dragHitPoint = new THREE.Vector3();
 
-    // 화면 좌표에서 카메라 광선 생성
     function setRayFromScreen(clientX, clientY) {
-
       const rect = renderer.domElement.getBoundingClientRect();
 
       if (!rect.width || !rect.height) return false;
@@ -985,20 +811,18 @@
       );
 
       camera.updateMatrixWorld();
+
       camera.projectionMatrixInverse
         .copy(camera.projectionMatrix)
         .invert();
 
       dragRaycaster.setFromCamera(dragNdc, camera);
-
       anchor.group.updateMatrixWorld(true);
 
       return true;
-
     }
 
     function screenToAnchorLocal(clientX, clientY, out) {
-
       if (!setRayFromScreen(clientX, clientY)) return false;
 
       dragPlaneNormal
@@ -1020,76 +844,61 @@
       anchor.group.worldToLocal(out);
 
       return true;
-
     }
 
     // 두 손가락 이동 상태
     const dragPrevLocal = new THREE.Vector3();
     const dragCurrLocal = new THREE.Vector3();
+
     let dragHasPrev = false;
     let dragTargetGroup = null;
 
-    // 3D 모델을 먼저 검사하고, 없으면 영상/이미지 배경을 검사
+    // 터치 대상 선택
     function pickTargetAtPoint(clientX, clientY) {
-
       if (!setRayFromScreen(clientX, clientY)) return null;
 
       if (modelRoot) {
-
         const modelHits = dragRaycaster.intersectObject(
           modelMoveGroup,
           true
         );
 
         if (modelHits.length > 0) return "model";
-
       }
 
-      // 이미지는 영상보다 앞에 있으므로 먼저 검사
       if (imageMesh) {
-
         const imageHits = dragRaycaster.intersectObject(
           imageMesh,
           false
         );
 
         if (imageHits.length > 0) return "image";
-
       }
 
-      // 재생바 (영상 바로 아래)
       if (videoBar) {
-
         const barHits = dragRaycaster.intersectObject(
           videoBar.hit,
           false
         );
 
         if (barHits.length > 0) return "bar";
-
       }
 
       if (backgroundMesh) {
-
         const backgroundHits = dragRaycaster.intersectObject(
           backgroundMesh,
           false
         );
 
         if (backgroundHits.length > 0) return "background";
-
       }
 
       return null;
-
     }
 
-    // 두 손가락이 "모두" 같은 대상 위에 있을 때만 그 대상 반환
-    // 한 손가락씩 서로 다른 대상 위이거나, 하나라도 대상 밖이면 이동 안 함
+    // 같은 대상에 두 손가락이 닿았는지 확인
     function pickDragTarget() {
-
       const points = Array.from(activePointers.values());
-
       if (points.length < 2) return null;
 
       const first = pickTargetAtPoint(points[0].x, points[0].y);
@@ -1101,12 +910,10 @@
       if (first === "image") return imageMoveGroup;
 
       return backgroundMoveGroup;
-
     }
 
+    // 터치 시작
     touchArea.addEventListener("pointerdown", (e) => {
-
-      // modelRoot가 없어도(영상/이미지만 있어도) 이동은 가능하도록
       if (!targetVisible) return;
 
       e.preventDefault();
@@ -1119,14 +926,14 @@
       touchArea.setPointerCapture(e.pointerId);
 
       if (activePointers.size === 1) {
-
         previousX = e.clientX;
         previousY = e.clientY;
 
-        // 터치 시작 지점의 대상 판별 및 탭 판정 시작
-        singleStartTarget = pickTargetAtPoint(e.clientX, e.clientY);
+        singleStartTarget = pickTargetAtPoint(
+          e.clientX,
+          e.clientY
+        );
 
-        // 재생바를 누르면 그 위치로 바로 이동
         if (singleStartTarget === "bar") {
           seekVideoFromScreen(e.clientX, e.clientY);
         }
@@ -1135,24 +942,17 @@
         tapStartX = e.clientX;
         tapStartY = e.clientY;
         tapStartTime = performance.now();
-
       }
 
       if (activePointers.size === 2) {
-
-        // 두 손가락이 되면 영상 탭 / 영상 재생 위치 이동 해제
         singleStartTarget = null;
         tapCandidate = false;
 
         pinchStartDistance = getPinchDistance();
 
-        // 두 손가락 이동 시작 기준점
         const mid = getPinchMidpoint();
-
-        // 두 손가락이 닿은 대상 판별 후, 대상이 있을 때만 이동 기준점 설정
         dragTargetGroup = pickDragTarget();
 
-        // 핀치 시작 크기: 선택된 대상의 현재 크기
         if (dragTargetGroup === modelMoveGroup && modelRoot) {
           pinchStartScale = modelRoot.scale.x;
         } else if (dragTargetGroup === imageMoveGroup) {
@@ -1163,7 +963,6 @@
           pinchStartScale = 1;
         }
 
-        // 어떤 대상이 선택됐는지 상단 상태 문구로 표시
         if (dragTargetGroup === modelMoveGroup) {
           status.textContent = "이동 중: 오브젝트";
         } else if (dragTargetGroup === imageMoveGroup) {
@@ -1177,13 +976,11 @@
         dragHasPrev = (mid && dragTargetGroup)
           ? screenToAnchorLocal(mid.x, mid.y, dragPrevLocal)
           : false;
-
       }
-
     });
 
+    // 터치 이동
     touchArea.addEventListener("pointermove", (e) => {
-
       if (!activePointers.has(e.pointerId)) return;
 
       e.preventDefault();
@@ -1193,24 +990,18 @@
         y: e.clientY
       });
 
-      // 한 손가락: 영상 위에서 시작했으면 재생 위치 이동, 아니면 회전
+      // 한 손가락: 회전 또는 영상 이동
       if (activePointers.size === 1) {
-
-        // 일정 거리 이상 움직이면 탭이 아님
         if (tapCandidate) {
-
           const movedX = e.clientX - tapStartX;
           const movedY = e.clientY - tapStartY;
 
           if (Math.sqrt(movedX * movedX + movedY * movedY) > TAP_MOVE_LIMIT) {
             tapCandidate = false;
           }
-
         }
 
         if (singleStartTarget === "background") {
-
-          // 영상 재생 위치 앞뒤 이동 
           if (
             !tapCandidate &&
             video &&
@@ -1219,7 +1010,6 @@
             Number.isFinite(video.duration) &&
             video.duration > 0
           ) {
-
             const deltaX = e.clientX - previousX;
 
             const seekSeconds =
@@ -1232,22 +1022,18 @@
               0,
               video.duration
             );
-
           }
 
           previousX = e.clientX;
           previousY = e.clientY;
 
         } else if (singleStartTarget === "bar") {
-
-          // 재생바 드래그: 손가락 위치로 재생 위치 이동
           seekVideoFromScreen(e.clientX, e.clientY);
 
           previousX = e.clientX;
           previousY = e.clientY;
 
         } else if (modelRoot) {
-
           const deltaX = e.clientX - previousX;
           const deltaY = e.clientY - previousY;
 
@@ -1256,26 +1042,17 @@
 
           previousX = e.clientX;
           previousY = e.clientY;
-
         }
-
       }
 
-      // 두 손가락: 확대 / 축소 + 위치 이동
+      // 두 손가락: 확대, 축소 및 위치 이동
       else if (activePointers.size === 2) {
-
-        // 확대 / 축소
         if (dragTargetGroup && pinchStartDistance > 0) {
-
           const currentDistance = getPinchDistance();
-
           const scaleRatio = currentDistance / pinchStartDistance;
-
           const newScale = pinchStartScale * scaleRatio;
 
           if (dragTargetGroup === modelMoveGroup && modelRoot) {
-
-            // 오브젝트: 기존과 동일한 범위
             const clampedScale = THREE.MathUtils.clamp(
               newScale,
               initialFitScale * 0.1,
@@ -1285,8 +1062,6 @@
             modelRoot.scale.setScalar(clampedScale);
 
           } else if (dragTargetGroup === backgroundMoveGroup) {
-
-            // 영상/이미지 배경: 초기 크기(1) 기준 
             const clampedScale = THREE.MathUtils.clamp(
               newScale,
               0.1,
@@ -1296,8 +1071,6 @@
             backgroundMoveGroup.scale.setScalar(clampedScale);
 
           } else if (dragTargetGroup === imageMoveGroup) {
-
-            // 이미지: 초기 크기(1) 기준 
             const clampedScale = THREE.MathUtils.clamp(
               newScale,
               0.1,
@@ -1305,40 +1078,40 @@
             );
 
             imageMoveGroup.scale.setScalar(clampedScale);
-
           }
-
         }
 
-        // 위치 이동: 두 손가락 중간점이 움직인 만큼, 처음 닿은 대상만 이동
         const mid = getPinchMidpoint();
 
         if (mid && dragTargetGroup) {
-
           if (!dragHasPrev) {
+            dragHasPrev = screenToAnchorLocal(
+              mid.x,
+              mid.y,
+              dragPrevLocal
+            );
 
-            dragHasPrev = screenToAnchorLocal(mid.x, mid.y, dragPrevLocal);
+          } else if (screenToAnchorLocal(
+            mid.x,
+            mid.y,
+            dragCurrLocal
+          )) {
+            dragTargetGroup.position.x +=
+              dragCurrLocal.x - dragPrevLocal.x;
 
-          } else if (screenToAnchorLocal(mid.x, mid.y, dragCurrLocal)) {
-
-            dragTargetGroup.position.x += dragCurrLocal.x - dragPrevLocal.x;
-            dragTargetGroup.position.y += dragCurrLocal.y - dragPrevLocal.y;
+            dragTargetGroup.position.y +=
+              dragCurrLocal.y - dragPrevLocal.y;
 
             dragPrevLocal.copy(dragCurrLocal);
-
           }
-
         }
-
       }
-
     });
 
+    // 터치 종료
     function stopPointer(e) {
-
       if (!activePointers.has(e.pointerId)) return;
 
-      // 영상 위를 한 손가락으로 톡 두드리면 재생 / 일시정지
       if (
         e.type === "pointerup" &&
         activePointers.size === 1 &&
@@ -1354,26 +1127,20 @@
 
       activePointers.delete(e.pointerId);
 
-      // 두 손가락 상태가 끝나면 이동 기준점 및 대상 해제
       dragHasPrev = false;
       dragTargetGroup = null;
 
-      // 손가락을 떼면 상단 상태 문구 원복
       updateStatus();
 
       if (activePointers.size === 1) {
-
         const remaining = Array.from(activePointers.values())[0];
 
         previousX = remaining.x;
         previousY = remaining.y;
 
       } else if (activePointers.size === 0) {
-
         pinchStartDistance = 0;
-
       }
-
     }
 
     touchArea.addEventListener("pointerup", stopPointer);
@@ -1381,6 +1148,5 @@
     touchArea.addEventListener("lostpointercapture", stopPointer);
 
   </script>
-
 </body>
 </html>
